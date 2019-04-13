@@ -1,0 +1,275 @@
+Agenda:
+#1. Information about the dataset
+#2. Exploratory Data Analysis
+#3. Data Cleaning 
+#4. Models
+#5. Predictions
+#6. Recommendations
+
+#Dataset
+#Kaggle.com – Online community of data scientists
+#Data is owned by Analytics Vidya
+#The dataset here is a sample of the transactions made in a retail store.
+#The number of records in the data set is 537,577
+
+#There are 12 variables in the data set.
+#Response variable: Purchase (Purchase amount in dollars)
+#Covariates: Product Id, Gender, Age, Occupation, City Category, Stay in City(number of years stay in city), Marital Status, Product Categories.
+
+#EDA
+#Exploratory data Analysis is performed to generate questions about the data set.
+#In other words, it decides the direction of the analysis.
+#We try and find patterns in the dataset with the help of data transformation and data visualization.
+#Use what you learn to refine your questions
+
+
+
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(ggrepel)
+
+# obtain dataset
+data <- read.csv("BlackFriday.csv", h=T)
+head(data)
+sapply(data, function(x) sum(is.na(x)))
+str(data)
+
+# explore User_ID
+data %>% distinct(User_ID) %>% nrow() %>% paste("buyers registered at Black Friday")
+
+# define names
+Gender <- data$Gender
+Age <- data$Age
+Occupation <- data$Occupation
+City <- data$City_Category
+City_Years <- data$Stay_In_Current_City_Years
+Marital <- data$Marital_Status
+Product_1 <- data$Product_Category_1
+Product_2 <- data$Product_Category_2
+Product_3 <- data$Product_Category_3
+Purchase <- data$Purchase
+
+# obtain the total purchase distribution
+data %>%
+  group_by(User_ID) %>%
+  summarise(total_purchase = sum(Purchase)) %>%
+  ggplot(aes(x = total_purchase)) + 
+  geom_histogram(col = 'black',fill = 'blue', binwidth = 300000, center = 150000) +
+  theme_linedraw() + 
+  theme(legend.box.background	= element_rect(colour = "black"),
+        legend.background = element_rect(fill = "gainsboro"),
+        panel.background = element_rect(fill = "gainsboro", colour = "white", size = 0.5, linetype = "solid"), 
+        plot.background = element_rect(fill = "gainsboro"),
+        panel.grid.major = element_line(size = 0.5, linetype = 'solid', colour = "white"), 
+        panel.grid.minor = element_line(size = 0.25, linetype = 'solid', colour = "white"),
+        plot.title = element_text(hjust = 0, face = 'bold',color = 'black'), 
+        plot.subtitle = element_text(face = "italic")) + 
+  labs(x = 'Dollars', y = 'Number of Buyers', title = "Black Friday", 
+       subtitle = "Distribution of total purchasing by buyer") + 
+  scale_y_continuous(limits = c(0,2000), breaks = c(0,500,1000,1500,2000)) + 
+  scale_x_continuous(labels = scales::comma) 
+
+# distribution of total purchasing by city
+data %>%
+  group_by(User_ID, City_Category) %>%
+  summarise(total_purchase = sum(Purchase)) %>%
+  ggplot(aes(x = total_purchase, group = City_Category)) + 
+  geom_histogram(aes(fill=City_Category),col = 'black', binwidth = 300000, center = 150000) +
+  theme_linedraw() + 
+  theme(legend.box.background	= element_rect(colour = "black"),
+        legend.background = element_rect(fill = "gainsboro"),
+        panel.background = element_rect(fill = "gainsboro", colour = "white", size = 0.5, linetype = "solid"), 
+        plot.background = element_rect(fill = "gainsboro"), 
+        panel.grid.major = element_line(size = 0.5, linetype = 'solid', colour = "white"), 
+        panel.grid.minor = element_line(size = 0.25, linetype = 'solid', colour = "white"), 
+        plot.title = element_text(hjust = 0, face = 'bold',color = 'black'), #title settings
+        plot.subtitle = element_text(face = "italic")) + 
+  labs(x = 'Dollars', y = 'Number of Buyers', title = "Black Friday", 
+       subtitle = "Distribution of total purchasing by city") + 
+  guides(fill=guide_legend(title = "City")) +
+  scale_y_continuous(limits = c(0,2000), breaks = c(0,500,1000,1500,2000)) + 
+  scale_x_continuous(labels = scales::comma) 
+
+# obtain the age distribution
+plot_ly(age, labels = ~Age, values = ~Total, type = 'pie',
+        textposition = 'inside',
+        textinfo = 'label+percent',
+        insidetextfont = list(color = '#FFFFFF'),
+        hoverinfo = 'text',
+        text = ~paste(Total, 'People'),
+        marker = list(colors = colors,
+                      line = list(color = '#FFFFFF', width = 1)), showlegend = FALSE) %>%
+  layout(title = 'Age Distribution', titlefont = list(size = 18, color = 'black'),
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+# detail in occupation
+data %>%  group_by(User_ID) %>%
+  filter(row_number(User_ID) == 1) %>%
+  group_by(Age, Occupation) %>%
+  summarise(occupationCount = n()) %>%
+  ggplot(aes(x = Occupation, y = occupationCount)) +
+  geom_area(fill = "royalblue") +
+  facet_wrap(Age~.)
+
+# [not sure what data1 is]
+  data %>%
+    group_by(Product_Category_1) %>%
+    summarise(catCount = n()) %>%
+    ggplot(aes(x = Product_Category_1, y = catCount))+
+    geom_bar(stat = "identity", fill = "royalblue") +
+    ggtitle("Category count taking only\nProduct_category_1 into account")
+  data1 %>%
+    group_by(category) %>%
+    summarise(catCount = n()) %>%
+    ggplot(aes(x = category, y = catCount))+
+    geom_bar(stat = "identity", fill = "royalblue") +
+    ggtitle("Category count taking all\ncategories (1,2,3) into account")
+
+# the frequency count of different purchase prices across the three cities
+  data %>%
+    select(Purchase, City_Category) %>%
+    ggplot() +
+    geom_histogram(aes(x = Purchase), bins = 24, fill = "royalblue") +
+    facet_wrap(City_Category~.) +
+    theme(axis.text.x.bottom = element_text(angle = 90))
+  
+# customer count of different age group across the three cities
+  data %>%  
+    group_by(User_ID) %>%
+    filter(row_number(User_ID) == 1) %>%
+    group_by(Age, Stay_In_Current_City_Years, City_Category) %>%
+    summarise(customer_count = n()) %>%
+    ggplot(aes(Age, customer_count, fill = Stay_In_Current_City_Years)) +
+    geom_bar(stat = "identity", position = position_dodge()) +
+    facet_wrap(City_Category~.) +
+    theme(axis.text.x.bottom = element_text(angle = 90))
+
+# product cateory perference
+p1<-data %>% group_by(Product_Category_1) %>% count() %>% 
+  ggplot(aes(x=reorder(Product_Category_1,n),y=n))+
+  geom_col(aes(fill=as.factor(Product_Category_1)))+
+  labs(x="",y="",title="product category perference")+
+  theme(legend.position="none")
+p1
+# product cateory perference ingender
+p2<-data %>% group_by(Gender,Product_Category_1) %>% count() %>% 
+  ggplot(aes(x=as.factor(Product_Category_1),y=n,fill=as.factor(Gender)))+
+  geom_bar(stat="identity",position="dodge")+
+  labs(x="",y="",fill="gender",title="product category perference in gender")
+p2
+# pirce per category
+p3<-data %>% ggplot(aes(x=reorder(as.factor(Product_Category_1),Purchase),y=Purchase))+
+  geom_boxplot()+ggtitle("Price per category")
+p3
+
+# replace the missing value with "0" and drop User_ID & Product_ID
+data[is.na(data)] <- 0
+data <- data[,-c(1,2)]
+head(data)
+
+# replace the age with the mean value & change S_I_C_Y into numeric variable
+table(data$Age)
+table(data$Stay_In_Current_City_Years)
+data$Stay_In_Current_City_Years <- as.numeric(data$Stay_In_Current_City_Years)-1
+str(data)
+library(tidyr)
+library(dplyr)
+data<-data %>% separate(Age,c("low","up")) %>% mutate(low=as.numeric(low),up=as.numeric(up)) %>% mutate(Age=(low+up)/2) %>% select(-c(low,up))
+data$Age<-ifelse(is.na(data$Age),58,data$Age)
+head(data)
+
+# change data type
+data$Marital_Status = as.factor(data$Marital_Status)
+data$Occupation = as.numeric(data$Occupation)
+data$Stay_In_Current_City_Years <- as.numeric(data$Stay_In_Current_City_Years)-1
+data$Stay_In_Current_City_Years = as.numeric(data$Stay_In_Current_City_Years)
+data$Age = as.numeric(data$Age)
+data$Purchase = as.numeric(data$Purchase)
+data$Product_Category_1 = as.numeric(data$Product_Category_1)
+str(data)
+
+# divide data in train and test
+sample = sample(1:nrow(data), size = floor(nrow(data)*0.7))
+train = data[sample,]
+test = data[-sample,]
+
+# visualize dataset
+par(mfrow=c(2,4))
+hist(train$Occupation)
+hist(train$Stay_In_Current_City_Years)
+hist(train$Product_Category_1)
+hist(train$Product_Category_2)
+hist(train$Product_Category_3)
+hist(train$Purchase)
+hist(train$Age)
+
+#Key Findings
+
+#Analysis - Check for missing values using the structure of the dataset
+#Result – Product category 2 and Product category 3 are the only variables that have missing values
+#Analysis - Check for the total number of buyers
+#Result – We have 5896 buyers
+#Check for the structure of the dataset to realize if we have to make any changes in that data types of the dataset
+
+Analysis – By looking at the dataset, we can tell that the occupation values are masked. As the values are in the range 1 to 20. We try to find out what does it represents. Using logic, age has a relationship with the occupation and we tried exploring that using visualization.
+Result - The result shows that there is a spike of “Occupation = 10” in “Age = 0-17” and a spike of “occupation = 4” in “Age = 18-25”, so we regard the “Occupation = 10” as School and “Occupation = 4” as College/University.
+
+Analysis –Distribution of age in the dataset
+Result - The result shows that most buyers are in 28-36 year bucket
+Analysis - Distribution of total purchase amount by city
+Result - The result shows that with the increasing of purchase price, the number of buyers decrease, and buyers in City_C generally spend less money than buyers in City_A and City_B. City_C has the most buyers while buyers in City_B spent most money.
+
+Analysis – Frequency count of different purchase prices across the three cities
+Result - The result shows that there are two obvious spikes in all of three cities as “7-9K” range and “15-17K” range. The purchase is nearly normal distribution and city_B has the most purchase amount.
+Analysis - Since we are interested in how buyers allocated in different age group and different stay years, obtain the customer count of different age group across the different stay years
+Result - The result shows that the most prominent category is the one of customers living for one year in this city and the most clients are aged 25-36. We have a bold idea that this store could be selling furniture.
+
+
+# modeling
+library(leaps)
+results2=leaps(x=cbind(train$Gender, train$Occupation, train$City_Category, 
+                       train$Stay_In_Current_City_Years, train$Marital_Status, 
+                       train$Product_Category_1, train$Product_Category_2, 
+                       train$Product_Category_3, train$Age), 
+               y=train$Purchase, method="adjr2")
+cbind(results2$which,results2$adjr2)
+
+
+allmodels <- regsubsets(train$Purchase ~ train$Gender + train$Occupation + train$City_Category + 
+                        train$Stay_In_Current_City_Years + train$Marital_Status + 
+                        train$Product_Category_1 + train$Product_Category_2 + 
+                        train$Product_Category_3 + train$Age, data = train,nbest=3)
+summary(allmodels)
+plot(allmodels)
+
+res1 <- lm(Purchase ~ Gender + Occupation + City_Category + Product_Category_1 
+           + Product_Category_2 + Product_Category_3 + Age, data=train)
+summary(res1)
+library(car)
+vif(res1)
+
+#We visualized the BIC level of all possible regressions. 
+#To obtain the regression with the lowest BIC, we should delete “Stay_In_Current_City_Years” and “Marital_Status” variables from our independent variables.
+
+#The result shows that all the independent variables are significant at 0.1% level, and the adjusted R2 is 0.1366, which means only 13.66% of dependent variables can be explained by this model. 
+#The (vif) result shows that all VIFs is smaller than 10, which means there has no multicollinearity in this model
+
+# predict the value in test and train data
+train_purchase <- predict(res2, newdata = train)
+train <- cbind(train, train_purchase)
+
+test_purchase <- predict(res2, newdata = test)
+test <- cbind(test, test_purchase)
+
+# how much error
+ggplot(data = train) + geom_bar(mapping = aes(x = Gender, y = Purchase),
+                                state = "identity", position = "stack") +
+ggtitle("purchase vs Gender(traing set)") + xlab("Gender") + ylab("Purchase")
+
+#We predict the purchase value in both datasets. 
+#And check the MAPE, RMSE and Cor
+#All of these values are close to each other, which means that this regression can give us a stable and reasonable prediction by using the information within this dataset.
+
+
